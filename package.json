@@ -18,7 +18,10 @@
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "turbo run build --filter=!docs && changeset publish"
+    "release": "turbo run build --filter=!docs && changeset publish",
+    "commit": "cz",
+    "docs:dev": "docker run --rm -it -p 8000:8000 -v \"${PWD}\":/docs -w /docs python:3.9-slim /bin/sh -c \"pip install mkdocs mkdocs-material mkdocs-techdocs-core && mkdocs serve -a 0.0.0.0:8000\"",
+    "docs:build": "docker run --rm -v \"${PWD}\":/docs -w /docs python:3.9-slim /bin/sh -c \"pip install mkdocs mkdocs-material mkdocs-techdocs-core && mkdocs build\""
   },
   "devDependencies": {
     "@changesets/cli": "^2.26.0",
@@ -26,6 +29,8 @@
     "@commitlint/config-conventional": "^17.4.4",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.36.0",
     "husky": "^8.0.3",
     "lint-staged": "^13.2.0",
@@ -39,5 +44,19 @@
   "packageManager": "yarn@4.0.2",
   "dependencies": {
     "commander": "^13.1.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,mdx,css,html}": [
+      "prettier --write"
+    ]
   }
 }

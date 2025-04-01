@@ -339,6 +339,56 @@ This interactive documentation helps developers understand and interact with the
 3. Push to the branch: `git push origin feature/new-feature`
 4. Submit a pull request
 
+### Commit Conventions
+
+This project uses [Commitizen](https://github.com/commitizen/cz-cli) and [Conventional Commits](https://www.conventionalcommits.org/) to ensure consistent commit messages. Instead of using the standard `git commit` command, please use:
+
+```bash
+yarn commit
+```
+
+This will launch an interactive prompt to help you create properly formatted commit messages with the following format:
+
+```
+type(scope): subject
+
+body
+
+footer
+```
+
+**Types:**
+
+- `feat`: A new feature
+- `fix`: A bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, missing semicolons, etc)
+- `refactor`: Code changes that neither fix bugs nor add features
+- `perf`: Performance improvements
+- `test`: Adding or fixing tests
+- `chore`: Changes to the build process or auxiliary tools
+
+**Scopes:**
+
+- `frontend`: Changes to the frontend application
+- `backend`: Changes to the backend application
+- `ui`: Changes to UI components
+- `shared`: Changes to shared utilities
+- `api`: Changes to API clients
+- `config`: Changes to configuration
+- `docs`: Documentation changes
+- `infra`: Infrastructure changes
+- `ci`: CI/CD changes
+- `deps`: Dependency updates
+
+### Git Hooks
+
+This project uses [Husky](https://github.com/typicode/husky) to enforce quality checks before commits and pushes:
+
+- **pre-commit**: Runs linting and formatting on staged files
+- **commit-msg**: Validates commit message format
+- **pre-push**: Runs type checking and tests
+
 ## Project Status and To-Do List
 
 This monorepo is a work in progress. While the basic structure is in place, several items need to be completed to make it fully production-ready:

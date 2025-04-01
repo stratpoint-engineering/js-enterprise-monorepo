@@ -38,3 +38,24 @@ yarn-error.log*
 
 # mkdocs site
 site/
+
+# Yarn Berry (Yarn 4)
+# https://yarnpkg.com/getting-started/qa#which-files-should-be-gitignored
+
+# Zero-installs approach: Keep the cache, exclude these:
+.yarn/*
+!.yarn/cache
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# If you're not using Zero-installs, uncomment this instead:
+# .yarn/*
+# !.yarn/patches
+# !.yarn/plugins
+# !.yarn/releases
+# !.yarn/sdks
+# !.yarn/versions
+# .pnp.*
