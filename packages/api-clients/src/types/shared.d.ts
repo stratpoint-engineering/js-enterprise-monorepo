@@ -15,13 +15,16 @@ declare module '@enterprise-monorepo/shared' {
     };
   };
 
-  // User role enum
-  export enum UserRole {
-    ADMIN = 'admin',
-    MANAGER = 'manager',
-    USER = 'user',
-    GUEST = 'guest',
-  }
+  // User role type
+  export type UserRole = 'admin' | 'manager' | 'user' | 'guest';
+
+  // User role constants
+  export const UserRole: {
+    ADMIN: 'admin';
+    MANAGER: 'manager';
+    USER: 'user';
+    GUEST: 'guest';
+  };
 
   // User interface
   export interface User {

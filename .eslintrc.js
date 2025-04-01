@@ -7,6 +7,14 @@ module.exports = {
     es6: true,
   },
   overrides: [
+    // Declaration files
+    {
+      files: ['*.d.ts'],
+      rules: {
+        '@typescript-eslint/no-duplicate-enum-values': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+      },
+    },
     // TypeScript files
     {
       files: ['*.ts', '*.tsx'],
