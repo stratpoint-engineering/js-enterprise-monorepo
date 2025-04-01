@@ -1,24 +1,21 @@
-import React from "react";
-import Head from "next/head";
-import { useRouter } from "next/router";
-import { Button } from "@enterprise-monorepo/ui-components";
+import { Button } from '@enterprise-monorepo/ui-components';
+import Head from 'next/head';
+import { useRouter } from 'next/router';
+import React from 'react';
 
 export default function Home() {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    console.log("Get Started button clicked!");
+    console.log('Get Started button clicked!');
     // For now, we'll just navigate to a placeholder dashboard
-    router.push("/dashboard");
+    router.push('/dashboard');
   };
 
   const handleDocumentation = () => {
-    console.log("Documentation button clicked!");
+    console.log('Documentation button clicked!');
     // Open documentation in a new tab
-    window.open(
-      "https://github.com/yourusername/enterprise-monorepo",
-      "_blank"
-    );
+    window.open('https://github.com/yourusername/enterprise-monorepo', '_blank');
   };
 
   return (
