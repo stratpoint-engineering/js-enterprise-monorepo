@@ -1,0 +1,29 @@
+{
+  "name": "@enterprise-monorepo/config",
+  "version": "0.1.0",
+  "private": true,
+  "files": [
+    "eslint-preset.js",
+    "jest-preset.js",
+    "typescript/base.json",
+    "typescript/nextjs.json",
+    "typescript/node.json",
+    "typescript/react-library.json"
+  ],
+  "scripts": {
+    "clean": "rimraf node_modules"
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.6.0",
+    "@typescript-eslint/parser": "^6.6.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-jest": "^27.2.3",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0"
+  },
+  "devDependencies": {
+    "rimraf": "^5.0.1"
+  }
+}

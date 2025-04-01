@@ -1,0 +1,57 @@
+FROM node:18-alpine AS base
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies only when needed
+FROM base AS deps
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat
+COPY package.json package-lock.json* yarn.lock* ./
+COPY apps/backend/package.json ./apps/backend/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/api-clients/package.json ./packages/api-clients/
+COPY packages/config/package.json ./packages/config/
+
+RUN \
+  if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Set environment variables
+ENV NODE_ENV production
+
+# Build the app
+RUN npm run build -- --filter=backend
+
+# Production image, copy all the files and run NestJS
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nestjs
+
+# You only need to copy the built app, not the entire source
+COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+# Set proper permissions
+RUN chown -R nestjs:nodejs /app
+
+USER nestjs
+
+EXPOSE 3001
+
+ENV PORT 3001
+
+CMD ["node", "apps/backend/dist/main.js"]

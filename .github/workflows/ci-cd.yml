@@ -1,0 +1,235 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  AWS_REGION: us-west-2
+  ECR_REPOSITORY_FRONTEND: enterprise-monorepo-frontend
+  ECR_REPOSITORY_BACKEND: enterprise-monorepo-backend
+  ECS_CLUSTER: enterprise-monorepo-cluster
+  ECS_SERVICE_FRONTEND: enterprise-monorepo-frontend-service
+  ECS_SERVICE_BACKEND: enterprise-monorepo-backend-service
+  ECS_TASK_DEFINITION_FRONTEND: .aws/frontend-task-definition.json
+  ECS_TASK_DEFINITION_BACKEND: .aws/backend-task-definition.json
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: password
+          MONGO_INITDB_DATABASE: test_db
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm run test
+        env:
+          MONGODB_URI: mongodb://admin:password@localhost:27017/test_db?authSource=admin
+          JWT_SECRET: test_jwt_secret
+          JWT_REFRESH_SECRET: test_jwt_refresh_secret
+
+  build:
+    name: Build
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build apps
+        run: npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push frontend image to Amazon ECR
+        id: build-frontend-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          # Build a docker container and push it to ECR
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:${{ github.sha }} -f infrastructure/docker/Dockerfile.frontend .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:${{ github.sha }}
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Build, tag, and push backend image to Amazon ECR
+        id: build-backend-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          # Build a docker container and push it to ECR
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:${{ github.sha }} -f infrastructure/docker/Dockerfile.backend .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:${{ github.sha }}
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  deploy-dev:
+    name: Deploy to Dev
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Download frontend task definition
+        run: |
+          aws ecs describe-task-definition --task-definition enterprise-monorepo-frontend-dev --query taskDefinition > $ECS_TASK_DEFINITION_FRONTEND
+
+      - name: Fill in the new frontend image ID in the Amazon ECS task definition
+        id: task-def-frontend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION_FRONTEND }}
+          container-name: frontend
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ github.sha }}
+
+      - name: Deploy frontend Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-frontend.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_FRONTEND }}-dev
+          cluster: ${{ env.ECS_CLUSTER }}-dev
+          wait-for-service-stability: true
+
+      - name: Download backend task definition
+        run: |
+          aws ecs describe-task-definition --task-definition enterprise-monorepo-backend-dev --query taskDefinition > $ECS_TASK_DEFINITION_BACKEND
+
+      - name: Fill in the new backend image ID in the Amazon ECS task definition
+        id: task-def-backend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION_BACKEND }}
+          container-name: backend
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_BACKEND }}:${{ github.sha }}
+
+      - name: Deploy backend Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-backend.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_BACKEND }}-dev
+          cluster: ${{ env.ECS_CLUSTER }}-dev
+          wait-for-service-stability: true
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Download frontend task definition
+        run: |
+          aws ecs describe-task-definition --task-definition enterprise-monorepo-frontend-prod --query taskDefinition > $ECS_TASK_DEFINITION_FRONTEND
+
+      - name: Fill in the new frontend image ID in the Amazon ECS task definition
+        id: task-def-frontend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION_FRONTEND }}
+          container-name: frontend
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ github.sha }}
+
+      - name: Deploy frontend Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-frontend.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_FRONTEND }}-prod
+          cluster: ${{ env.ECS_CLUSTER }}-prod
+          wait-for-service-stability: true
+
+      - name: Download backend task definition
+        run: |
+          aws ecs describe-task-definition --task-definition enterprise-monorepo-backend-prod --query taskDefinition > $ECS_TASK_DEFINITION_BACKEND
+
+      - name: Fill in the new backend image ID in the Amazon ECS task definition
+        id: task-def-backend
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION_BACKEND }}
+          container-name: backend
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_BACKEND }}:${{ github.sha }}
+
+      - name: Deploy backend Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def-backend.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_BACKEND }}-prod
+          cluster: ${{ env.ECS_CLUSTER }}-prod
+          wait-for-service-stability: true
