@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react';
 
 export type InputSize = 'sm' | 'md' | 'lg';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   /**
    * The input label
    */
@@ -59,7 +59,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       id,
       ...props
     }: InputProps,
-    ref: React.ForwardedRef<HTMLInputElement>
+    ref: React.ForwardedRef<HTMLInputElement>,
   ) => {
     // Generate a unique ID if not provided
     const inputId = id || `input-${Math.random().toString(36).substring(2, 9)}`;
@@ -72,7 +72,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     };
 
     // Base styles
-    const baseInputClasses = 'bg-white border rounded-md focus:outline-none focus:ring-2 transition';
+    const baseInputClasses =
+      'bg-white border rounded-md focus:outline-none focus:ring-2 transition';
 
     // State variations
     const stateClasses = error
@@ -98,7 +99,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       leftIconClass,
       rightIconClass,
       className,
-    ].filter(Boolean).join(' ');
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     return (
       <div className={`${fullWidth ? 'w-full' : ''}`}>
@@ -113,13 +116,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               {leftIcon}
             </div>
           )}
-          <input
-            ref={ref}
-            id={inputId}
-            disabled={disabled}
-            className={inputClasses}
-            {...props}
-          />
+          <input ref={ref} id={inputId} disabled={disabled} className={inputClasses} {...props} />
           {rightIcon && (
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               {rightIcon}
@@ -133,7 +130,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 Input.displayName = 'Input';

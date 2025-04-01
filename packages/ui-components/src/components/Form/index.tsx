@@ -81,9 +81,10 @@ export const Form: React.FC<FormProps> = ({
   };
 
   // Get the appropriate spacing class
-  const spacingClass = typeof spacing === 'boolean'
-    ? spacingClasses[spacing ? 'true' : 'false']
-    : spacingClasses[spacing];
+  const spacingClass =
+    typeof spacing === 'boolean'
+      ? spacingClasses[spacing ? 'true' : 'false']
+      : spacingClasses[spacing];
 
   // Combine classes
   const formClasses = [spacingClass, className].filter(Boolean).join(' ');
@@ -122,22 +123,22 @@ export const FormControl: React.FC<FormControlProps> = ({
   return (
     <div className={`mb-4 ${className}`}>
       {label && (
-        <label
-          htmlFor={fieldId}
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
+        <label htmlFor={fieldId} className="block text-sm font-medium text-gray-700 mb-1">
           {label}
           {required && <span className="text-red-600 ml-1">*</span>}
         </label>
       )}
 
       {React.isValidElement(children)
-        ? React.cloneElement(children as React.ReactElement, {
+        ? React.cloneElement(children, {
             id: fieldId,
-            'aria-describedby': error ? `${fieldId}-error` : helpText ? `${fieldId}-help` : undefined,
+            'aria-describedby': error
+              ? `${fieldId}-error`
+              : helpText
+              ? `${fieldId}-help`
+              : undefined,
             'aria-invalid': error ? 'true' : undefined,
-            ...((children as React.ReactElement).props),
-          })
+          } as React.HTMLAttributes<HTMLElement>)
         : children}
 
       {(error || helpText) && (

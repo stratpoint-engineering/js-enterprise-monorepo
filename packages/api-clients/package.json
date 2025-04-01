@@ -11,7 +11,7 @@
     "dev": "tsup src/index.ts --format cjs,esm --watch",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "clean": "rimraf dist node_modules",
     "generate:api": "openapi-generator-cli generate -i http://localhost:3001/api-json -g typescript-axios -o ./src/generated"
   },

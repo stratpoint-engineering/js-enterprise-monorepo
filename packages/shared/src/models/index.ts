@@ -52,4 +52,5 @@ export interface RefreshTokenDto {
   refreshToken: string;
 }
 
-export * from './user.model';
+// Export only the utility functions from user.model, not the interface
+export { getUserFullName, hasRole, isAdmin, isManager } from './user.model';
