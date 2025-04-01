@@ -203,8 +203,8 @@ mkdocs serve
 #### Option 2: Using Docker (no Python installation required)
 
 ```bash
-# Run the documentation server with Docker
-docker run -it --rm -p 8000:8000 -v ${PWD}:/docs squidfunk/mkdocs-material serve -a 0.0.0.0:8000
+# Run the documentation server with Docker (Python base image with all dependencies installed)
+docker run --rm -it -p 8000:8000 -v "${PWD}":/docs -w /docs python:3.9-slim /bin/sh -c "pip install mkdocs mkdocs-material mkdocs-techdocs-core && mkdocs serve -a 0.0.0.0:8000"
 ```
 
 This mounts your current directory to the container and serves the documentation at http://localhost:8000.
@@ -222,7 +222,7 @@ mkdocs build
 #### Using Docker
 
 ```bash
-docker run --rm -v ${PWD}:/docs squidfunk/mkdocs-material build
+docker run --rm -v "${PWD}":/docs -w /docs python:3.9-slim /bin/sh -c "pip install mkdocs mkdocs-material mkdocs-techdocs-core && mkdocs build"
 ```
 
 The built documentation will be in the `site/` directory, which can be deployed to any static hosting service.
